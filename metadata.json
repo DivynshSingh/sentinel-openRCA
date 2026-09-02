@@ -1,0 +1,8 @@
+{
+  "name": "Sentinel — Agentic RCA System",
+  "description": "Agentic Root Cause Analysis system on the OpenRCA benchmark with automated data processing, 3-sigma metric anomaly detection, trace latency analysis, log TF-IDF ranking, and interactive hypothesis-critic RCA investigation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

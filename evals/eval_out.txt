@@ -1,0 +1,363 @@
+
+dvynsh@dvynsh:~/Downloads/OpenRCA$ python run_all_eval.py 
+==========================================================================================
+      SENTINEL RCA AGENT: OPENRCA v1 BENCHMARK FULL EVALUATION SUITE           
+==========================================================================================
+[TelemetryStore] Indexed 7 incident queries | Telemetry files: 20 metric, 10 trace, 10 log.
+• Dataset Source : ./data/Bank/query.csv (Official OpenRCA Schema)
+• LLM Provider   : GEMINI (Model: gemini-3.6-flash)
+• API Key Status : LIVE KEY LOADED
+• Target Suite   : 7 Incident Queries (task_1, task_2, task_3, task_4, task_5, task_6, task_7)
+
+
+##########################################################################################
+ INVESTIGATING INCIDENT #1 (Query ID: task_1)
+##########################################################################################
+❓ Incident Question:
+   "On March 25, 2021, between 23:00 and 23:30, a failure occurred. The exact time of the root cause occurrence is currently unknown, making it challenging to diagnose the issue effectively. Please determine the precise root cause occurrence time."
+
+	🔍 STEP-BY-STEP AGENT NODE TRACE & REASONING:
+------------------------------------------------------------------------------------------
+▶ [Node 1: When Observer Agent] (Tool: summarize_metrics)
+   [When Agent Node] Scanned metrics for window 2021-03-25 23:00:00 to 2021-03-25 23:30:00. No 3-sigma threshold breaches detected; tracking onset at 2021-03-25 23:00:00.
+
+▶ [Node 2: What Observer Agent] (Tool: summarize_traces)
+   [What Agent Node] Traversed trace call graphs for incident window. No severe cross-service call cascade bottlenecks found.
+
+▶ [Node 3: Why Observer Agent] (Tool: summarize_logs)
+   [Why Agent Node] Inspected log streams for incident window. Identified diagnostic focus on component unknown_service.
+
+▶ [Node 4: Hypothesis Generation] (Tool: create_hypothesis)
+   [Hypothesis Generation Node - LLM Output]
+     • Candidate H1 (unknown_service): Degradation observed during incident window 2021-03-25 23:00:00 (conf: 0.92)
+     • Candidate H2 (pod-05): Downstream latency amplification (conf: 0.55)
+     • LLM Reasoning: Telemetry multi-modal correlation: unknown_service identified across logs, metric anomalies, and trace call paths.
+
+▶ [Node 5: Upstream Critic Node] (Tool: walk_upstream_trace)
+   [Upstream Critic Node]
+     • Skeptic Defense Check on Decoy (pod-05): pod-05 has no downstream root dependencies causing latency; it is the origin source.
+     • Action: Dropped candidate H2 (pod-05) to prevent salience capture / presence bias.
+     • Action: Confirmed candidate H1 (unknown_service) as the isolated root cause origin.
+
+▶ [Node 6: Finalizer Node] (Tool: create_finding)
+   [Finalizer Node]
+     • Root Cause Component: unknown_service
+     • Root Cause Time     : 2021-03-25 23:00:00
+     • Root Cause Reason   : Degradation observed during incident window 2021-03-25 23:00:00
+
+📋 EVALUATION VERDICT VS OPENRCA GROUND TRUTH:
+------------------------------------------------------------------------------------------
+  • Ground Truth Root Cause :  at 2021-03-25 23:16:00
+  • Ground Truth Reason     : The only root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-25 23:16:00
+  • Predicted Root Cause    : unknown_service at 2021-03-25 23:00:00
+  • Predicted Reason        : Degradation observed during incident window 2021-03-25 23:00:00
+  • AC@1 Accuracy           : ❌ FAIL
+  • Time Accuracy (±3m)     : ❌ FAIL
+  • Reason Semantic F1      : 0.1429
+  • Skeptic Defense         : ✅ REFUTED SALIENCE DECOY
+  • Investigation Latency   : 332447 ms
+
+##########################################################################################
+ INVESTIGATING INCIDENT #2 (Query ID: task_2)
+##########################################################################################
+❓ Incident Question:
+   "On March 4, 2021, between 02:30 and 03:00, a failure was observed. The underlying reason for this failure remains unknown. Your task is to identify the root cause reason for this failure."
+
+🔍 STEP-BY-STEP AGENT NODE TRACE & REASONING:
+------------------------------------------------------------------------------------------
+▶ [Node 1: When Observer Agent] (Tool: summarize_metrics)
+   [When Agent Node] Analyzed telemetry metrics across cluster. Detected statistical 3-sigma anomaly in Redis02 (redis-Redis_6379_Redis  (used_memory)) with deviation score 4.88σ starting at 2021-03-04 02:35:00.
+
+▶ [Node 2: What Observer Agent] (Tool: summarize_traces)
+   [What Agent Node] Traversed distributed traces. Isolated upstream-downstream call link (pod-01 -> dockerA1) experiencing p95 latency of 574ms and error rate 100.0%.
+
+▶ [Node 3: Why Observer Agent] (Tool: summarize_logs)
+   [Why Agent Node] Inspected log streams for incident window. Identified diagnostic focus on component Redis02.
+
+▶ [Node 4: Hypothesis Generation] (Tool: create_hypothesis)
+   [Hypothesis Generation Node - LLM Output]
+     • Candidate H1 (redis02): Degradation observed during incident window 2021-03-04 02:35:00 (conf: 0.92)
+     • Candidate H2 (pod-01): Downstream latency amplification (conf: 0.55)
+     • LLM Reasoning: Telemetry multi-modal correlation: Redis02 identified across logs, metric anomalies, and trace call paths.
+
+▶ [Node 5: Upstream Critic Node] (Tool: walk_upstream_trace)
+   [Upstream Critic Node]
+     • Skeptic Defense Check on Decoy (pod-01): pod-01 has no downstream root dependencies causing latency; it is the origin source.
+     • Action: Dropped candidate H2 (pod-01) to prevent salience capture / presence bias.
+     • Action: Confirmed candidate H1 (redis02) as the isolated root cause origin.
+
+▶ [Node 6: Finalizer Node] (Tool: create_finding)
+   [Finalizer Node]
+     • Root Cause Component: redis02
+     • Root Cause Time     : 2021-03-04 02:35:00
+     • Root Cause Reason   : Degradation observed during incident window 2021-03-04 02:35:00
+
+📋 EVALUATION VERDICT VS OPENRCA GROUND TRUTH:
+------------------------------------------------------------------------------------------
+  • Ground Truth Root Cause :  at 
+  • Ground Truth Reason     : The only predicted root cause reason is high memory usage
+  • Predicted Root Cause    : redis02 at 2021-03-04 02:35:00
+  • Predicted Reason        : Degradation observed during incident window 2021-03-04 02:35:00
+  • AC@1 Accuracy           : ❌ FAIL
+  • Time Accuracy (±3m)     : ❌ FAIL
+  • Reason Semantic F1      : 0.0000
+  • Skeptic Defense         : ✅ REFUTED SALIENCE DECOY
+  • Investigation Latency   : 107249 ms
+
+##########################################################################################
+ INVESTIGATING INCIDENT #3 (Query ID: task_3)
+##########################################################################################
+❓ Incident Question:
+   "During the specified time range of March 25, 2021, from 15:30 to 16:00, the system experienced one failure. The exact component responsible for this failure is currently unknown. Your task is to identify the root cause component."
+
+🔍 STEP-BY-STEP AGENT NODE TRACE & REASONING:
+------------------------------------------------------------------------------------------
+▶ [Node 1: When Observer Agent] (Tool: summarize_metrics)
+   [When Agent Node] Analyzed telemetry metrics across cluster. Detected statistical 3-sigma anomaly in Mysql02 (Mysql-MySQL_3306_Innodb buffer pool pages free) with deviation score 5.3σ starting at 2021-03-25 15:55:00.
+
+▶ [Node 2: What Observer Agent] (Tool: summarize_traces)
+   [What Agent Node] Traversed distributed traces. Isolated upstream-downstream call link (IG01 -> Tomcat02) experiencing p95 latency of 1126ms and error rate 19.0%.
+
+▶ [Node 3: Why Observer Agent] (Tool: summarize_logs)
+   [Why Agent Node] Inspected log streams for incident window. Identified diagnostic focus on component Mysql02.
+
+▶ [Node 4: Hypothesis Generation] (Tool: create_hypothesis)
+   [Hypothesis Generation Node - LLM Output]
+     • Candidate H1 (mysql02): Degradation observed during incident window 2021-03-25 15:55:00 (conf: 0.92)
+     • Candidate H2 (IG01): Downstream latency amplification (conf: 0.55)
+     • LLM Reasoning: Telemetry multi-modal correlation: Mysql02 identified across logs, metric anomalies, and trace call paths.
+
+▶ [Node 5: Upstream Critic Node] (Tool: walk_upstream_trace)
+   [Upstream Critic Node]
+     • Skeptic Defense Check on Decoy (IG01): IG01 has no downstream root dependencies causing latency; it is the origin source.
+     • Action: Dropped candidate H2 (IG01) to prevent salience capture / presence bias.
+     • Action: Confirmed candidate H1 (mysql02) as the isolated root cause origin.
+
+▶ [Node 6: Finalizer Node] (Tool: create_finding)
+   [Finalizer Node]
+     • Root Cause Component: mysql02
+     • Root Cause Time     : 2021-03-25 15:55:00
+     • Root Cause Reason   : Degradation observed during incident window 2021-03-25 15:55:00
+
+📋 EVALUATION VERDICT VS OPENRCA GROUND TRUTH:
+------------------------------------------------------------------------------------------
+  • Ground Truth Root Cause : mysql02 at 
+  • Ground Truth Reason     : The only predicted root cause component is Mysql02
+  • Predicted Root Cause    : mysql02 at 2021-03-25 15:55:00
+  • Predicted Reason        : Degradation observed during incident window 2021-03-25 15:55:00
+  • AC@1 Accuracy           : ✅ PASS
+  • Time Accuracy (±3m)     : ❌ FAIL
+  • Reason Semantic F1      : 0.0000
+  • Skeptic Defense         : ✅ REFUTED SALIENCE DECOY
+  • Investigation Latency   : 164235 ms
+
+##########################################################################################
+ INVESTIGATING INCIDENT #4 (Query ID: task_4)
+##########################################################################################
+❓ Incident Question:
+   "Within the time range of March 4, 2021, from 05:30 to 06:00, a failure was recorded. The exact time when the root cause occurred and the reason behind the failure are currently unknown. Please identify the root cause occurrence datetime and the root cause reason."
+
+🔍 STEP-BY-STEP AGENT NODE TRACE & REASONING:
+------------------------------------------------------------------------------------------
+▶ [Node 1: When Observer Agent] (Tool: summarize_metrics)
+   [When Agent Node] Analyzed telemetry metrics across cluster. Detected statistical 3-sigma anomaly in Mysql01 (Mysql-MySQL_3306_Handler Write) with deviation score 4.12σ starting at 2021-03-04 05:44:00.
+
+▶ [Node 2: What Observer Agent] (Tool: summarize_traces)
+   [What Agent Node] Traversed distributed traces. Isolated upstream-downstream call link (dockerA1 -> MG02) experiencing p95 latency of 759ms and error rate 80.6%.
+
+▶ [Node 3: Why Observer Agent] (Tool: summarize_logs)
+   [Why Agent Node] Inspected log streams for incident window. Identified diagnostic focus on component Mysql01.
+
+▶ [Node 4: Hypothesis Generation] (Tool: create_hypothesis)
+   [Hypothesis Generation Node - LLM Output]
+     • Candidate H1 (mysql01): Degradation observed during incident window 2021-03-04 05:44:00 (conf: 0.92)
+     • Candidate H2 (dockerA1): Downstream latency amplification (conf: 0.55)
+     • LLM Reasoning: Telemetry multi-modal correlation: Mysql01 identified across logs, metric anomalies, and trace call paths.
+
+▶ [Node 5: Upstream Critic Node] (Tool: walk_upstream_trace)
+   [Upstream Critic Node]
+     • Skeptic Defense Check on Decoy (dockerA1): dockerA1 has no downstream root dependencies causing latency; it is the origin source.
+     • Action: Dropped candidate H2 (dockerA1) to prevent salience capture / presence bias.
+     • Action: Confirmed candidate H1 (mysql01) as the isolated root cause origin.
+
+▶ [Node 6: Finalizer Node] (Tool: create_finding)
+   [Finalizer Node]
+     • Root Cause Component: mysql01
+     • Root Cause Time     : 2021-03-04 05:44:00
+     • Root Cause Reason   : Degradation observed during incident window 2021-03-04 05:44:00
+
+📋 EVALUATION VERDICT VS OPENRCA GROUND TRUTH:
+------------------------------------------------------------------------------------------
+  • Ground Truth Root Cause :  at 2021-03-04 05:31:00
+  • Ground Truth Reason     : The only root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-04 05:31:00
+The only predicted root cause reason is high memory usage
+  • Predicted Root Cause    : mysql01 at 2021-03-04 05:44:00
+  • Predicted Reason        : Degradation observed during incident window 2021-03-04 05:44:00
+  • AC@1 Accuracy           : ❌ FAIL
+  • Time Accuracy (±3m)     : ❌ FAIL
+  • Reason Semantic F1      : 0.1053
+  • Skeptic Defense         : ✅ REFUTED SALIENCE DECOY
+  • Investigation Latency   : 96388 ms
+
+##########################################################################################
+ INVESTIGATING INCIDENT #5 (Query ID: task_5)
+##########################################################################################
+❓ Incident Question:
+   "On March 25, 2021, during the time range from 00:00 to 00:30, there were two failures detected in the system. The exact times when the root causes occurred and the components responsible for these failures are currently unknown. You need to determine the root cause occurrence times and identify the root cause components."
+
+🔍 STEP-BY-STEP AGENT NODE TRACE & REASONING:
+------------------------------------------------------------------------------------------
+▶ [Node 1: When Observer Agent] (Tool: summarize_metrics)
+   [When Agent Node] Analyzed telemetry metrics across cluster. Detected statistical 3-sigma anomaly in MG02 (OSLinux-OSLinux_MEMORY_MEMORY_NoCacheMemPerc) with deviation score 4.22σ starting at 2021-03-25 00:16:00.
+
+▶ [Node 2: What Observer Agent] (Tool: summarize_traces)
+   [What Agent Node] Traversed distributed traces. Isolated upstream-downstream call link (IG01 -> Tomcat04) experiencing p95 latency of 387ms and error rate 4.0%.
+
+▶ [Node 3: Why Observer Agent] (Tool: summarize_logs)
+   [Why Agent Node] Inspected log streams for incident window. Identified diagnostic focus on component MG02.
+
+▶ [Node 4: Hypothesis Generation] (Tool: create_hypothesis)
+   [Hypothesis Generation Node - LLM Output]
+     • Candidate H1 (mg02): Degradation observed during incident window 2021-03-25 00:16:00 (conf: 0.92)
+     • Candidate H2 (IG01): Downstream latency amplification (conf: 0.55)
+     • LLM Reasoning: Telemetry multi-modal correlation: MG02 identified across logs, metric anomalies, and trace call paths.
+
+▶ [Node 5: Upstream Critic Node] (Tool: walk_upstream_trace)
+   [Upstream Critic Node]
+     • Skeptic Defense Check on Decoy (IG01): IG01 has no downstream root dependencies causing latency; it is the origin source.
+     • Action: Dropped candidate H2 (IG01) to prevent salience capture / presence bias.
+     • Action: Confirmed candidate H1 (mg02) as the isolated root cause origin.
+
+▶ [Node 6: Finalizer Node] (Tool: create_finding)
+   [Finalizer Node]
+     • Root Cause Component: mg02
+     • Root Cause Time     : 2021-03-25 00:16:00
+     • Root Cause Reason   : Degradation observed during incident window 2021-03-25 00:16:00
+
+📋 EVALUATION VERDICT VS OPENRCA GROUND TRUTH:
+------------------------------------------------------------------------------------------
+  • Ground Truth Root Cause : mg02 at 2021-03-25 00:07:00
+  • Ground Truth Reason     : The 1-th root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-25 00:07:00
+The 1-th predicted root cause component is MG02
+The 2-th root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-25 00:19:00
+The 2-th predicted root cause component is apache01
+  • Predicted Root Cause    : mg02 at 2021-03-25 00:16:00
+  • Predicted Reason        : Degradation observed during incident window 2021-03-25 00:16:00
+  • AC@1 Accuracy           : ✅ PASS
+  • Time Accuracy (±3m)     : ❌ FAIL
+  • Reason Semantic F1      : 0.1053
+  • Skeptic Defense         : ✅ REFUTED SALIENCE DECOY
+  • Investigation Latency   : 269290 ms
+
+##########################################################################################
+ INVESTIGATING INCIDENT #6 (Query ID: task_6)
+##########################################################################################
+❓ Incident Question:
+   "During the time range of March 25, 2021, from 11:30 to 12:00, a failure occurred, but the exact component responsible for the failure and the underlying reason is currently unknown. Your task is to identify the root cause component and the root cause reason for the incident."
+
+🔍 STEP-BY-STEP AGENT NODE TRACE & REASONING:
+------------------------------------------------------------------------------------------
+▶ [Node 1: When Observer Agent] (Tool: summarize_metrics)
+   [When Agent Node] Analyzed telemetry metrics across cluster. Detected statistical 3-sigma anomaly in Mysql01 (Mysql-MySQL_3306_max trx lock memory bytes) with deviation score 5.39σ starting at 2021-03-25 11:40:00.
+
+▶ [Node 2: What Observer Agent] (Tool: summarize_traces)
+   [What Agent Node] Traversed distributed traces. Isolated upstream-downstream call link (pod-01 -> dockerB1) experiencing p95 latency of 1006ms and error rate 33.3%.
+
+▶ [Node 3: Why Observer Agent] (Tool: summarize_logs)
+   [Why Agent Node] Inspected log streams for incident window. Identified diagnostic focus on component Mysql01.
+
+▶ [Node 4: Hypothesis Generation] (Tool: create_hypothesis)
+   [Hypothesis Generation Node - LLM Output]
+     • Candidate H1 (mysql01): Degradation observed during incident window 2021-03-25 11:40:00 (conf: 0.92)
+     • Candidate H2 (pod-01): Downstream latency amplification (conf: 0.55)
+     • LLM Reasoning: Telemetry multi-modal correlation: Mysql01 identified across logs, metric anomalies, and trace call paths.
+
+▶ [Node 5: Upstream Critic Node] (Tool: walk_upstream_trace)
+   [Upstream Critic Node]
+     • Skeptic Defense Check on Decoy (pod-01): pod-01 has no downstream root dependencies causing latency; it is the origin source.
+     • Action: Dropped candidate H2 (pod-01) to prevent salience capture / presence bias.
+     • Action: Confirmed candidate H1 (mysql01) as the isolated root cause origin.
+
+▶ [Node 6: Finalizer Node] (Tool: create_finding)
+   [Finalizer Node]
+     • Root Cause Component: mysql01
+     • Root Cause Time     : 2021-03-25 11:40:00
+     • Root Cause Reason   : Degradation observed during incident window 2021-03-25 11:40:00
+
+📋 EVALUATION VERDICT VS OPENRCA GROUND TRUTH:
+------------------------------------------------------------------------------------------
+  • Ground Truth Root Cause : mysql02 at 
+  • Ground Truth Reason     : The only predicted root cause component is Mysql02
+The only predicted root cause reason is high CPU usage
+  • Predicted Root Cause    : mysql01 at 2021-03-25 11:40:00
+  • Predicted Reason        : Degradation observed during incident window 2021-03-25 11:40:00
+  • AC@1 Accuracy           : ❌ FAIL
+  • Time Accuracy (±3m)     : ❌ FAIL
+  • Reason Semantic F1      : 0.0000
+  • Skeptic Defense         : ✅ REFUTED SALIENCE DECOY
+  • Investigation Latency   : 209849 ms
+
+##########################################################################################
+ INVESTIGATING INCIDENT #7 (Query ID: task_7)
+##########################################################################################
+❓ Incident Question:
+   "A failure was reported within the time range of March 25, 2021, from 19:30 to 20:00. Currently, the root cause component, the exact time of root cause occurrence, and the underlying reason for the failure are unknown. Please identify the root cause occurrence time, the affected component, and the reason for this failure."
+
+🔍 STEP-BY-STEP AGENT NODE TRACE & REASONING:
+------------------------------------------------------------------------------------------
+▶ [Node 1: When Observer Agent] (Tool: summarize_metrics)
+   [When Agent Node] Analyzed telemetry metrics across cluster. Detected statistical 3-sigma anomaly in Mysql01 (Mysql-MySQL_3306_max trx lock memory bytes) with deviation score 5.48σ starting at 2021-03-25 20:00:00.
+
+▶ [Node 2: What Observer Agent] (Tool: summarize_traces)
+   [What Agent Node] Traversed distributed traces. Isolated upstream-downstream call link (MG01 -> dockerB2) experiencing p95 latency of 1094ms and error rate 10.6%.
+
+▶ [Node 3: Why Observer Agent] (Tool: summarize_logs)
+   [Why Agent Node] Inspected log streams for incident window. Identified diagnostic focus on component Mysql01.
+
+▶ [Node 4: Hypothesis Generation] (Tool: create_hypothesis)
+   [Hypothesis Generation Node - LLM Output]
+     • Candidate H1 (mysql01): Degradation observed during incident window 2021-03-25 20:00:00 (conf: 0.92)
+     • Candidate H2 (MG01): Downstream latency amplification (conf: 0.55)
+     • LLM Reasoning: Telemetry multi-modal correlation: Mysql01 identified across logs, metric anomalies, and trace call paths.
+
+▶ [Node 5: Upstream Critic Node] (Tool: walk_upstream_trace)
+   [Upstream Critic Node]
+     • Skeptic Defense Check on Decoy (MG01): MG01 has no downstream root dependencies causing latency; it is the origin source.
+     • Action: Dropped candidate H2 (MG01) to prevent salience capture / presence bias.
+     • Action: Confirmed candidate H1 (mysql01) as the isolated root cause origin.
+
+▶ [Node 6: Finalizer Node] (Tool: create_finding)
+   [Finalizer Node]
+     • Root Cause Component: mysql01
+     • Root Cause Time     : 2021-03-25 20:00:00
+     • Root Cause Reason   : Degradation observed during incident window 2021-03-25 20:00:00
+
+📋 EVALUATION VERDICT VS OPENRCA GROUND TRUTH:
+------------------------------------------------------------------------------------------
+  • Ground Truth Root Cause : tomcat04 at 2021-03-25 19:40:00
+  • Ground Truth Reason     : The only root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-25 19:40:00
+The only predicted root cause component is Tomcat04
+The only predicted root cause reason is high CPU usage
+  • Predicted Root Cause    : mysql01 at 2021-03-25 20:00:00
+  • Predicted Reason        : Degradation observed during incident window 2021-03-25 20:00:00
+  • AC@1 Accuracy           : ❌ FAIL
+  • Time Accuracy (±3m)     : ❌ FAIL
+  • Reason Semantic F1      : 0.0952
+  • Skeptic Defense         : ✅ REFUTED SALIENCE DECOY
+  • Investigation Latency   : 191404 ms
+
+==========================================================================================
+                    OPENRCA v1 BENCHMARK OVERALL SCORECARD                    
+==========================================================================================
+ Total Incidents Evaluated:             7
+ Total Evaluation Duration:             1371.06s (Avg 195.87s per incident)
+ Top-1 Accuracy (AC@1):                 28.6% (OpsAgent Baseline: 16.5%)
+ Top-3 Recall   (AC@3):                 28.6%
+ Top-5 Recall   (AC@5):                 28.6%
+ Time Window Accuracy (±3 mins):        0.0%
+ Time Window Accuracy (±5 mins):        0.0%
+ Reason Semantic F1 Score:              0.0641
+ Salience Defense Refutation Rate:      100.0%
+==========================================================================================
+
+Complete structured benchmark report exported to: openrca_all_cases_eval.json

@@ -1,0 +1,36 @@
+sentinel:
+  system: Bank
+
+  data_paths:
+    # TODO: Update these to point to your actual OpenRCA dataset
+    metrics_csv: "./data/Bank/metric_pod.csv"
+    traces_csv: "./data/Bank/trace_pod.csv"
+    logs_csv: "./data/Bank/log_pod.csv"
+    query_csv: "./data/Bank/query.csv"
+    record_csv: "./data/Bank/record.csv"
+    db_path: "./data/sentinel.duckdb"
+
+  data_processor:
+    metric_sigma: 3
+    trace_latency_pct: 95
+    log_keywords:
+      - fatal
+      - error
+      - crash
+      - fail
+      - timeout
+      - refused
+      - exception
+      - denied
+    log_tfidf_pctile: 80
+    trace_window_seconds: 60
+    top_k_pods: 5
+    top_k_metrics: 5
+
+  rest_service:
+    host: "0.0.0.0"
+    port: 8000
+
+  mcp_server:
+    transport: "stdio"  # or "sse"
+    rest_base_url: "http://localhost:8000"

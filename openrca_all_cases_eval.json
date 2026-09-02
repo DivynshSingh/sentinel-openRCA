@@ -1,0 +1,219 @@
+{
+  "benchmark": "OpenRCA v1 Full Evaluation",
+  "llm_provider": "gemini",
+  "llm_model": "gemini-3.6-flash",
+  "total_queries": 7,
+  "aggregate_metrics": {
+    "ac_at_1_pct": 28.57142857142857,
+    "ac_at_3_pct": 28.57142857142857,
+    "ac_at_5_pct": 28.57142857142857,
+    "time_within_3min_pct": 0.0,
+    "avg_reason_f1": 0.0641,
+    "salience_refutation_rate_pct": 100.0
+  },
+  "evaluations": [
+    {
+      "query_id": "task_1",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "",
+        "root_cause_time": "2021-03-25 23:16:00",
+        "root_cause_reason": "The only root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-25 23:16:00"
+      },
+      "prediction": {
+        "root_cause_component": "unknown_service",
+        "root_cause_time": "2021-03-25 23:00:00",
+        "root_cause_reason": "Degradation observed during incident window 2021-03-25 23:00:00"
+      },
+      "metrics": {
+        "ac_at_1": false,
+        "ac_at_3": false,
+        "ac_at_5": false,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": 960,
+        "reason_precision": 0.2,
+        "reason_recall": 0.1111,
+        "reason_f1": 0.1429,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 332447
+      }
+    },
+    {
+      "query_id": "task_2",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "",
+        "root_cause_time": "",
+        "root_cause_reason": "The only predicted root cause reason is high memory usage"
+      },
+      "prediction": {
+        "root_cause_component": "redis02",
+        "root_cause_time": "2021-03-04 02:35:00",
+        "root_cause_reason": "Degradation observed during incident window 2021-03-04 02:35:00"
+      },
+      "metrics": {
+        "ac_at_1": false,
+        "ac_at_3": false,
+        "ac_at_5": false,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": null,
+        "reason_precision": 0.0,
+        "reason_recall": 0.0,
+        "reason_f1": 0.0,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 107249
+      }
+    },
+    {
+      "query_id": "task_3",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "mysql02",
+        "root_cause_time": "",
+        "root_cause_reason": "The only predicted root cause component is Mysql02"
+      },
+      "prediction": {
+        "root_cause_component": "mysql02",
+        "root_cause_time": "2021-03-25 15:55:00",
+        "root_cause_reason": "Degradation observed during incident window 2021-03-25 15:55:00"
+      },
+      "metrics": {
+        "ac_at_1": true,
+        "ac_at_3": true,
+        "ac_at_5": true,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": null,
+        "reason_precision": 0.0,
+        "reason_recall": 0.0,
+        "reason_f1": 0.0,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 164235
+      }
+    },
+    {
+      "query_id": "task_4",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "",
+        "root_cause_time": "2021-03-04 05:31:00",
+        "root_cause_reason": "The only root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-04 05:31:00\nThe only predicted root cause reason is high memory usage"
+      },
+      "prediction": {
+        "root_cause_component": "mysql01",
+        "root_cause_time": "2021-03-04 05:44:00",
+        "root_cause_reason": "Degradation observed during incident window 2021-03-04 05:44:00"
+      },
+      "metrics": {
+        "ac_at_1": false,
+        "ac_at_3": false,
+        "ac_at_5": false,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": 780,
+        "reason_precision": 0.2,
+        "reason_recall": 0.0714,
+        "reason_f1": 0.1053,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 96388
+      }
+    },
+    {
+      "query_id": "task_5",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "mg02",
+        "root_cause_time": "2021-03-25 00:07:00",
+        "root_cause_reason": "The 1-th root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-25 00:07:00\nThe 1-th predicted root cause component is MG02\nThe 2-th root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-25 00:19:00\nThe 2-th predicted root cause component is apache01"
+      },
+      "prediction": {
+        "root_cause_component": "mg02",
+        "root_cause_time": "2021-03-25 00:16:00",
+        "root_cause_reason": "Degradation observed during incident window 2021-03-25 00:16:00"
+      },
+      "metrics": {
+        "ac_at_1": true,
+        "ac_at_3": true,
+        "ac_at_5": true,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": 540,
+        "reason_precision": 0.2,
+        "reason_recall": 0.0714,
+        "reason_f1": 0.1053,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 269290
+      }
+    },
+    {
+      "query_id": "task_6",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "mysql02",
+        "root_cause_time": "",
+        "root_cause_reason": "The only predicted root cause component is Mysql02\nThe only predicted root cause reason is high CPU usage"
+      },
+      "prediction": {
+        "root_cause_component": "mysql01",
+        "root_cause_time": "2021-03-25 11:40:00",
+        "root_cause_reason": "Degradation observed during incident window 2021-03-25 11:40:00"
+      },
+      "metrics": {
+        "ac_at_1": false,
+        "ac_at_3": false,
+        "ac_at_5": false,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": null,
+        "reason_precision": 0.0,
+        "reason_recall": 0.0,
+        "reason_f1": 0.0,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 209849
+      }
+    },
+    {
+      "query_id": "task_7",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "tomcat04",
+        "root_cause_time": "2021-03-25 19:40:00",
+        "root_cause_reason": "The only root cause occurrence time is within 1 minutes (i.e., <=1min) of 2021-03-25 19:40:00\nThe only predicted root cause component is Tomcat04\nThe only predicted root cause reason is high CPU usage"
+      },
+      "prediction": {
+        "root_cause_component": "mysql01",
+        "root_cause_time": "2021-03-25 20:00:00",
+        "root_cause_reason": "Degradation observed during incident window 2021-03-25 20:00:00"
+      },
+      "metrics": {
+        "ac_at_1": false,
+        "ac_at_3": false,
+        "ac_at_5": false,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": 1200,
+        "reason_precision": 0.2,
+        "reason_recall": 0.0625,
+        "reason_f1": 0.0952,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 191404
+      }
+    }
+  ]
+}
