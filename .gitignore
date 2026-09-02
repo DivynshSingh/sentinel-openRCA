@@ -1,4 +1,5 @@
 .env
+__pycache__/
 data/
 Bank.zip
 sentinel-surrounding-system.zip

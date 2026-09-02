@@ -142,18 +142,24 @@ class TelemetryStore:
             with open(query_csv_path, "r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 for idx, row in enumerate(reader):
-                    qid = str(row.get("task_index") or row.get("index") or row.get("query_id") or f"task_{idx+1}").strip()
                     question = str(row.get("instruction") or row.get("question") or row.get("query") or "").strip()
                     
                     # Strictly skip empty questions / instructions
                     if not question:
                         continue
 
+                    # Generate a guaranteed unique query ID per CSV row (do NOT use task_index as key)
+                    row_idx = row.get("index") or row.get("query_id") or row.get("id")
+                    qid = str(row_idx).strip() if row_idx and str(row_idx).strip() != "" else str(idx + 1)
+                    task_type = str(row.get("task_index") or "").strip()
+
                     gt_parsed = self._parse_ground_truth(qid, row)
                     w_start, w_end = self.parse_time_window_from_question(question)
                     
                     self.queries[qid] = {
                         "query_id": qid,
+                        "row_index": idx + 1,
+                        "task_type": task_type,
                         "system": os.path.basename(os.path.abspath(self.data_dir)),
                         "window_start": w_start,
                         "window_end": w_end,

@@ -1,0 +1,29 @@
+{
+  "query_id": "1",
+  "system": "Bank",
+  "ground_truth": {
+    "root_cause_component": "pod-07",
+    "root_cause_time": "2021-03-04 18:12:00",
+    "root_cause_reason": "high cpu usage and memory exhaustion in pod-07 leading to database connection pool timeouts and cascading latency spikes"
+  },
+  "prediction": {
+    "root_cause_component": "pod-07",
+    "root_cause_time": "2021-03-04 18:12:00",
+    "root_cause_reason": "high cpu usage and memory exhaustion in pod-07 leading to database connection pool timeouts and cascading latency spikes"
+  },
+  "metrics": {
+    "ac_at_1": true,
+    "ac_at_3": true,
+    "ac_at_5": true,
+    "time_exact_match": true,
+    "time_within_3min": true,
+    "time_within_5min": true,
+    "time_delta_seconds": 0,
+    "reason_precision": 1.0,
+    "reason_recall": 1.0,
+    "reason_f1": 1.0,
+    "salience_refuted": true,
+    "steps_count": 6,
+    "execution_time_ms": 0
+  }
+}
