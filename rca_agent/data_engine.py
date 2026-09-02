@@ -51,25 +51,57 @@ class TelemetryStore:
 
     @staticmethod
     def parse_time_window_from_question(question: str) -> Tuple[str, str]:
-        """Extracts window_start and window_end from incident question/instruction text."""
+        """Extracts window_start and window_end from incident question/instruction text, supporting multi-date and cross-midnight boundaries."""
         if not question:
             return "", ""
         
         month_pattern = r"(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
         
-        # Pattern 1: Month Day Year with start and end times
-        m_date = re.search(rf"({month_pattern}\s+\d{{1,2}},?\s*\d{{4}})", question, re.IGNORECASE)
+        # Check if question has two explicit date strings (e.g., "from March 6, 2021, from 23:30 to March 7, 2021, at 00:00")
+        all_dates = list(re.finditer(rf"({month_pattern}\s+\d{{1,2}},?\s*\d{{4}})", question, re.IGNORECASE))
         m_times = re.findall(r"(\d{1,2}:\d{2}(?::\d{2})?)", question)
-        
-        if m_date and len(m_times) >= 2:
-            date_raw = m_date.group(1).replace(",", "").strip()
+
+        if len(all_dates) >= 2 and len(m_times) >= 2:
+            try:
+                d1_raw = all_dates[0].group(1).replace(",", "").strip()
+                d2_raw = all_dates[1].group(1).replace(",", "").strip()
+                d1 = None
+                d2 = None
+                for fmt in ("%B %d %Y", "%b %d %Y"):
+                    try:
+                        d1 = d1 or datetime.strptime(d1_raw, fmt)
+                    except Exception:
+                        pass
+                    try:
+                        d2 = d2 or datetime.strptime(d2_raw, fmt)
+                    except Exception:
+                        pass
+                if d1 and d2:
+                    sh, sm = map(int, m_times[0].split(":")[:2])
+                    eh, em = map(int, m_times[1].split(":")[:2])
+                    w_start = d1.replace(hour=sh, minute=sm, second=0).strftime("%Y-%m-%d %H:%M:%S")
+                    w_end = d2.replace(hour=eh, minute=em, second=0).strftime("%Y-%m-%d %H:%M:%S")
+                    return w_start, w_end
+            except Exception:
+                pass
+
+        # Pattern 1: Single Date with start and end times
+        if len(all_dates) >= 1 and len(m_times) >= 2:
+            date_raw = all_dates[0].group(1).replace(",", "").strip()
             for fmt in ("%B %d %Y", "%b %d %Y"):
                 try:
                     d = datetime.strptime(date_raw, fmt)
                     sh, sm = map(int, m_times[0].split(":")[:2])
                     eh, em = map(int, m_times[1].split(":")[:2])
-                    w_start = d.replace(hour=sh, minute=sm, second=0).strftime("%Y-%m-%d %H:%M:%S")
-                    w_end = d.replace(hour=eh, minute=em, second=0).strftime("%Y-%m-%d %H:%M:%S")
+                    w_start_dt = d.replace(hour=sh, minute=sm, second=0)
+                    w_end_dt = d.replace(hour=eh, minute=em, second=0)
+                    
+                    # Handle cross-midnight rollover (e.g. 23:30 to 00:00)
+                    if w_end_dt <= w_start_dt:
+                        w_end_dt = w_end_dt + timedelta(days=1)
+
+                    w_start = w_start_dt.strftime("%Y-%m-%d %H:%M:%S")
+                    w_end = w_end_dt.strftime("%Y-%m-%d %H:%M:%S")
                     return w_start, w_end
                 except Exception:
                     pass
@@ -80,6 +112,12 @@ class TelemetryStore:
             s1 = TelemetryStore.normalize_timestamp(iso_matches[0])
             s2 = TelemetryStore.normalize_timestamp(iso_matches[1])
             if s1 and s2:
+                if s2 <= s1 and len(s2) >= 19 and len(s1) >= 19:
+                    try:
+                        dt2 = datetime.strptime(s2, "%Y-%m-%d %H:%M:%S") + timedelta(days=1)
+                        s2 = dt2.strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        pass
                 return s1, s2
 
         return "", ""
@@ -344,49 +382,134 @@ class TelemetryStore:
         return sorted(list(self.queries.keys()), key=lambda x: int(x) if x.isdigit() else x)
 
     # ------------------------------------------------------------------
-    # OBSERVABILITY PRE-PROCESSING (100% On-Demand Streaming per Query)
+    # OBSERVABILITY PRE-PROCESSING (Multi-Metric Ensemble & Change-Point)
     # ------------------------------------------------------------------
+    @staticmethod
+    def _classify_fault_category(kpi_name: str) -> Tuple[str, float]:
+        """Returns canonical fault category and priority weight for the given KPI."""
+        kpi = kpi_name.lower()
+        if any(w in kpi for w in ["cpu", "load", "cpuload", "thrott"]):
+            return "high CPU usage", 1.6
+        if any(w in kpi for w in ["mem", "nocache", "heap", "ram", "buffer_pool", "oom", "used_memory"]):
+            return "high memory usage", 1.6
+        if any(w in kpi for w in ["drop", "loss", "retrans", "net", "packet", "latency"]):
+            return "network delay and packet loss", 1.4
+        if any(w in kpi for w in ["disk", "io", "write", "read", "await", "util", "queue"]):
+            return "disk io bottleneck and queue saturation", 1.3
+        if any(w in kpi for w in ["lock", "trx", "conn", "timeout", "pool", "handler"]):
+            return "database connection exhaustion and lock contention", 1.1
+        return "resource degradation", 1.0
+
     def extract_metric_anomalies(self, query_id: str) -> List[Dict[str, Any]]:
-        """Calculates 3-sigma anomalies on metrics streamed on-demand for the query window."""
+        """Calculates differenced multi-metric joint anomaly scores and change-point onset timestamps per component."""
         window_points = self.stream_metrics_for_query(query_id)
         if not window_points:
             return []
 
+        # Group data points by (component, KPI)
         groups = defaultdict(list)
         for m in window_points:
             groups[(m["cmdb_id"], m["kpi_name"])].append(m)
 
-        anomalies = []
-        for (comp, kpi), points in groups.items():
-            if len(points) < 3:
+        # Track per-component metric signals and onset timestamps
+        comp_signals = defaultdict(list)
+        comp_onsets = defaultdict(list)
+
+        # Monotonic counter keywords to always differentiate
+        monotonic_kpis = {"keyspace_misses", "handler_write", "bytes_sent", "bytes_received", "total_commands_processed", "total_connections_received", "max_trx_lock_memory_bytes"}
+
+        for (comp, kpi), raw_pts in groups.items():
+            # Sort chronologically
+            pts = sorted(raw_pts, key=lambda x: x["timestamp"])
+            if len(pts) < 3:
                 continue
-            vals = [p["value"] for p in points]
-            mean = sum(vals) / len(vals)
-            variance = sum((v - mean) ** 2 for v in vals) / len(vals)
-            std = math.sqrt(variance) or 1.0
 
-            max_val = max(vals)
-            deviation = (max_val - mean) / (std if std > 1.0 else 1.0)
+            # Detect if metric is a monotonic cumulative counter
+            raw_vals = [p["value"] for p in pts]
+            kpi_lower = kpi.lower()
+            is_monotonic_name = any(mk in kpi_lower for mk in monotonic_kpis)
+            is_monotonic_data = all(raw_vals[i] <= raw_vals[i+1] for i in range(len(raw_vals)-1)) and (raw_vals[-1] > raw_vals[0])
             
-            # Find earliest point exceeding threshold
-            spikes = [p for p in points if p["value"] >= mean + 1.2 * std]
-            if spikes and deviation >= 1.5:
-                earliest_p = spikes[0]
-                anomalies.append({
-                    "component_id": comp,
-                    "kpi_name": kpi,
-                    "ts": earliest_p["timestamp"],
-                    "value": round(max_val, 2),
-                    "baseline_mean": round(mean, 2),
-                    "baseline_std": round(std, 2),
-                    "deviation_score": round(deviation, 2),
-                    "anomaly_pattern": "steady_rise" if len(spikes) > 5 else "spike",
-                    "is_anomalous": True,
-                })
+            if is_monotonic_name or is_monotonic_data:
+                # Compute first-order differences
+                diff_pts = []
+                for i in range(1, len(pts)):
+                    d_val = max(0.0, pts[i]["value"] - pts[i-1]["value"])
+                    diff_pts.append({"timestamp": pts[i]["timestamp"], "value": d_val})
+                pts = diff_pts
+                if len(pts) < 3:
+                    continue
 
-        # Sort by deviation score descending
-        anomalies.sort(key=lambda x: x["deviation_score"], reverse=True)
-        return anomalies[:8]
+            vals = [p["value"] for p in pts]
+            
+            # Pre-incident baseline (first 30% of data points)
+            baseline_len = max(2, int(len(vals) * 0.35))
+            base_vals = vals[:baseline_len]
+            base_mean = sum(base_vals) / len(base_vals)
+            base_var = sum((x - base_mean) ** 2 for x in base_vals) / len(base_vals)
+            base_std = math.sqrt(base_var) if base_var > 1e-9 else 1e-5
+
+            # Calculate entire series mean and std
+            all_mean = sum(vals) / len(vals)
+            all_var = sum((x - all_mean) ** 2 for x in vals) / len(vals)
+            all_std = math.sqrt(all_var) if all_var > 1e-9 else 1e-5
+
+            # Check for sudden deviation from baseline or extreme peak
+            max_pt = max(pts, key=lambda p: p["value"])
+            z_score = abs(max_pt["value"] - base_mean) / base_std
+            all_z = abs(max_pt["value"] - all_mean) / all_std
+            effective_z = max(z_score, all_z)
+
+            if effective_z >= 1.8:
+                # Find the earliest change-point onset time (> 2.0 sigma from baseline)
+                onset_ts = max_pt["timestamp"]
+                for p in pts:
+                    if abs(p["value"] - base_mean) >= 2.0 * base_std:
+                        onset_ts = p["timestamp"]
+                        break
+                
+                cat, weight = self._classify_fault_category(kpi)
+                comp_signals[comp].append({
+                    "kpi_name": kpi,
+                    "category": cat,
+                    "weight": weight,
+                    "z_score": effective_z,
+                    "peak_val": max_pt["value"],
+                    "onset_ts": onset_ts,
+                    "peak_ts": max_pt["timestamp"],
+                })
+                comp_onsets[comp].append(onset_ts)
+
+        # Ensemble: Multiple weakly/strongly red metrics on the same component form a compound signal
+        component_anomalies = []
+        for comp, metrics in comp_signals.items():
+            # Compound multi-metric score: sqrt(sum(w_i * z_i^2)) + bonus for multi-metric coherence
+            weighted_z_sq = sum(m["weight"] * (m["z_score"] ** 2) for m in metrics)
+            metric_count_multiplier = 1.0 + (0.35 * (len(metrics) - 1))
+            composite_score = math.sqrt(weighted_z_sq) * metric_count_multiplier
+            
+            # Earliest onset timestamp across anomalous metrics for this component
+            valid_onsets = [ts for ts in comp_onsets[comp] if ts]
+            earliest_onset = min(valid_onsets) if valid_onsets else ""
+            
+            # Primary fault category determined by highest weighted z-score
+            primary_metric = max(metrics, key=lambda m: m["weight"] * m["z_score"])
+            
+            component_anomalies.append({
+                "component_id": comp,
+                "kpi_name": primary_metric["kpi_name"],
+                "category": primary_metric["category"],
+                "deviation_score": round(composite_score, 2),
+                "raw_z_score": round(primary_metric["z_score"], 2),
+                "metric_count": len(metrics),
+                "ts": earliest_onset or primary_metric["peak_ts"],
+                "peak_ts": primary_metric["peak_ts"],
+                "involved_kpis": [m["kpi_name"] for m in metrics],
+            })
+
+        # Sort by Composite Multi-Metric Anomaly Score
+        component_anomalies.sort(key=lambda x: x["deviation_score"], reverse=True)
+        return component_anomalies[:10]
 
     def extract_trace_bottlenecks(self, query_id: str) -> List[Dict[str, Any]]:
         """Computes caller-callee call graph, error rates, and p95 latency bottlenecks from streamed spans."""
@@ -397,49 +520,46 @@ class TelemetryStore:
         span_map = {s["span_id"]: s for s in window_traces}
         pair_durations = defaultdict(list)
         pair_errors = defaultdict(int)
-        pair_paths = {}
+        pair_totals = defaultdict(int)
+        pair_onsets = defaultdict(list)
 
-        for span in window_traces:
-            parent_id = span.get("parent_span_id")
-            callee = span["cmdb_id"]
-            dur = span["duration_ms"]
-            is_err = span["status"] == "error" or dur > 500
-
-            if parent_id and parent_id in span_map:
-                caller = span_map[parent_id]["cmdb_id"]
-                pair = (caller, callee)
-                pair_durations[pair].append(dur)
-                if is_err:
-                    pair_errors[pair] += 1
-                pair_paths[pair] = f"{caller} -> {callee}"
-            else:
-                pair = ("pod-01", callee)
-                pair_durations[pair].append(dur)
-                if is_err:
-                    pair_errors[pair] += 1
-                pair_paths[pair] = f"pod-01 -> {callee}"
+        for s in window_traces:
+            caller = "client-entry"
+            p_id = s.get("parent_span_id")
+            if p_id and p_id in span_map:
+                caller = span_map[p_id].get("cmdb_id", "client-entry")
+            callee = s["cmdb_id"]
+            pair = (caller, callee)
+            pair_durations[pair].append(s["duration_ms"])
+            pair_totals[pair] += 1
+            if s["status"] not in ("ok", "200", "0", ""):
+                pair_errors[pair] += 1
+                if s.get("timestamp"):
+                    pair_onsets[pair].append(s["timestamp"])
+            elif s["duration_ms"] > 500 and s.get("timestamp"):
+                pair_onsets[pair].append(s["timestamp"])
 
         bottlenecks = []
         for (caller, callee), durs in pair_durations.items():
-            durs_sorted = sorted(durs)
-            p95_idx = int(len(durs_sorted) * 0.95)
-            p95 = durs_sorted[min(p95_idx, len(durs_sorted) - 1)]
-            err_count = pair_errors[(caller, callee)]
-            err_rate = round(err_count / len(durs), 3)
-
-            if p95 > 200 or err_rate > 0.1:
+            durs.sort()
+            p95 = durs[int(len(durs) * 0.95)] if durs else 0
+            total = pair_totals[(caller, callee)]
+            err_rate = pair_errors[(caller, callee)] / total if total else 0
+            
+            onsets = pair_onsets[(caller, callee)]
+            earliest_ts = min(onsets) if onsets else ""
+            
+            if p95 > 250 or err_rate > 0.05:
                 bottlenecks.append({
                     "caller_id": caller,
                     "callee_id": callee,
-                    "call_count": len(durs),
-                    "error_rate": err_rate,
-                    "p95_latency_ms": int(p95),
-                    "max_latency_ms": int(max(durs)),
-                    "path_3hop": pair_paths.get((caller, callee), f"{caller} -> {callee}"),
+                    "p95_latency_ms": round(p95, 2),
+                    "error_rate": round(err_rate, 4),
+                    "sample_count": total,
+                    "onset_ts": earliest_ts,
                 })
-
         bottlenecks.sort(key=lambda x: (x["error_rate"], x["p95_latency_ms"]), reverse=True)
-        return bottlenecks[:6]
+        return bottlenecks[:8]
 
     def extract_log_summaries(self, query_id: str) -> List[Dict[str, Any]]:
         """Clusters error and fatal logs with TF-IDF keyword importance within incident window."""
@@ -447,36 +567,40 @@ class TelemetryStore:
         if not window_logs:
             return []
 
-        error_keywords = ["critical", "fatal", "error", "timeout", "outofmemory", "exhaustion", "throttle", "refused"]
+        error_keywords = ["critical", "fatal", "error", "timeout", "outofmemory", "exhaustion", "throttle", "refused", "fail", "drop"]
         comp_error_counts = defaultdict(int)
-        comp_templates = defaultdict(list)
+        comp_log_templates = defaultdict(lambda: defaultdict(int))
+        comp_onsets = defaultdict(list)
 
-        for log in window_logs:
-            lvl = log.get("level", "").upper()
-            msg = log.get("message", "")
-            comp = log.get("cmdb_id", "")
-
-            has_kw = any(kw in msg.lower() for kw in error_keywords)
-            if lvl in ("ERROR", "CRITICAL", "FATAL") or has_kw:
+        for l in window_logs:
+            comp = l["cmdb_id"]
+            msg = l["message"].lower()
+            is_err = l.get("level") in ("ERROR", "FATAL", "CRITICAL") or any(k in msg for k in error_keywords)
+            if is_err:
                 comp_error_counts[comp] += 1
-                comp_templates[comp].append(msg)
+                clean_msg = re.sub(r"[0-9a-fA-F\-]{8,}", "<ID>", l["message"])
+                comp_log_templates[comp][clean_msg] += 1
+                if l.get("timestamp"):
+                    comp_onsets[comp].append(l["timestamp"])
 
+        total_error_logs = sum(comp_error_counts.values()) or 1
         summaries = []
-        total_errors = sum(comp_error_counts.values()) or 1
-
-        for comp, msgs in comp_templates.items():
-            freq = comp_error_counts[comp]
-            rep_msg = msgs[0] if msgs else ""
-            tfidf_score = round(freq / total_errors, 3)
-
+        for comp, count in comp_error_counts.items():
+            tf = count / total_error_logs
+            idf = math.log(1 + (len(comp_error_counts) / 1.0))
+            tfidf = tf * idf
+            templates = comp_log_templates[comp]
+            top_tmpl = max(templates.items(), key=lambda x: x[1])[0] if templates else "Service error observed"
+            onsets = comp_onsets[comp]
+            earliest_ts = min(onsets) if onsets else ""
+            
             summaries.append({
                 "component_id": comp,
-                "template_id": f"tpl-{comp}",
-                "template_text": rep_msg,
-                "count": freq,
-                "tfidf_score": tfidf_score,
+                "error_count": count,
+                "tfidf_score": round(tfidf, 3),
+                "template_text": top_tmpl,
+                "onset_ts": earliest_ts,
             })
-
         summaries.sort(key=lambda x: (x["tfidf_score"], x["count"]), reverse=True)
         return summaries[:6]
 

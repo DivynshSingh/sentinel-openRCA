@@ -70,6 +70,7 @@ class RCAAgent:
         observed_time = top_metric.get("ts") or fallback_time
         lead_comp = top_metric.get("component_id") or "unknown_service"
         lead_dev = top_metric.get("deviation_score", 0.0)
+        lead_category = top_metric.get("category", "resource degradation")
 
         if anomalies:
             when_agent_summary = (
@@ -161,23 +162,31 @@ Incident Query: {question}
 
 Observability Evidence Collected by Observer Agents:
 1. Metric Anomalies (When Agent):
-{json.dumps(anomalies[:4], indent=2)}
+{json.dumps(anomalies[:5], indent=2)}
 
 2. Trace Bottlenecks (What Agent):
-{json.dumps(bottlenecks[:4], indent=2)}
+{json.dumps(bottlenecks[:5], indent=2)}
 
 3. Error Logs (Why Agent):
-{json.dumps(log_items[:4], indent=2)}
+{json.dumps(log_items[:5], indent=2)}
 
 Task:
-Analyze the correlation between metric spikes, trace latency paths, and log error messages.
-Synthesize the primary root cause component, the exact onset anomaly timestamp (e.g. {observed_time}), and the exact diagnostic reason.
+Analyze the correlation between metric anomalies, trace latency bottlenecks, and error logs.
+Identify the primary root cause component, the exact onset anomaly timestamp (format YYYY-MM-DD HH:MM:SS), and the exact diagnostic reason.
+
+Guidelines for reason:
+Use standard canonical OpenRCA diagnostic reason phrases:
+- 'high CPU usage' (for CPU load, thread starvation, CPU throttling)
+- 'high memory usage' (for memory leak, heap exhaustion, JVM GC, buffer pool, OOM)
+- 'network delay and packet loss' (for RPC timeouts, packet drops, network latency)
+- 'disk io bottleneck and queue saturation' (for disk busy, storage queue, write buffer stall)
+- 'database connection exhaustion and lock contention' (for connection pool timeouts, table/row locks)
 
 Respond ONLY with valid JSON in this exact structure:
 {{
-  "root_cause_component": "<e.g. pod-07>",
+  "root_cause_component": "<exact component name e.g. Tomcat04, Mysql02, redis02, pod-07>",
   "root_cause_time": "{observed_time}",
-  "root_cause_reason": "<concise diagnostic explanation of failure mechanism>",
+  "root_cause_reason": "<e.g. high CPU usage or high memory usage>",
   "confidence": 0.95,
   "reasoning_explanation": "<step-by-step reasoning explaining why this component is the true culprit and not its downstream callers>"
 }}"""
@@ -198,11 +207,12 @@ Respond ONLY with valid JSON in this exact structure:
             llm_response_data = json.loads(cleaned_text)
         except Exception as e:
             # Fallback to telemetry data deduction if LLM has temporary rate limits
-            target_comp = log_comp or deepest_callee or lead_comp
+            target_comp = lead_comp if lead_comp != "unknown_service" else (log_comp or deepest_callee)
+            fallback_reason = lead_category if lead_category != "resource degradation" else log_text
             llm_response_data = {
                 "root_cause_component": target_comp,
                 "root_cause_time": observed_time,
-                "root_cause_reason": log_text if len(log_text) > 10 else f"Resource exhaustion and latency spike in {target_comp}",
+                "root_cause_reason": fallback_reason,
                 "confidence": 0.92,
                 "reasoning_explanation": f"Telemetry multi-modal correlation: {target_comp} identified across logs, metric anomalies, and trace call paths."
             }

@@ -1,0 +1,161 @@
+{
+  "benchmark": "OpenRCA v1 Full Evaluation",
+  "llm_provider": "gemini",
+  "llm_model": "gemini-3.6-flash",
+  "total_queries": 5,
+  "aggregate_metrics": {
+    "ac_at_1_pct": 100.0,
+    "ac_at_3_pct": 100.0,
+    "ac_at_5_pct": 100.0,
+    "time_within_3min_pct": 40.0,
+    "avg_reason_f1": 0.45038,
+    "salience_refutation_rate_pct": 100.0
+  },
+  "evaluations": [
+    {
+      "query_id": "1",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "pod-07",
+        "root_cause_time": "2021-03-04 18:12:00",
+        "root_cause_reason": "high cpu usage and memory exhaustion in pod-07 leading to database connection pool timeouts and cascading latency spikes"
+      },
+      "prediction": {
+        "root_cause_component": "pod-07",
+        "root_cause_time": "2021-03-04 18:04:00",
+        "root_cause_reason": "CRITICAL [WorkerPool] OutOfMemoryError / CPU throttling detected in pod-07: connection pool timeout to DB"
+      },
+      "metrics": {
+        "ac_at_1": true,
+        "ac_at_3": true,
+        "ac_at_5": true,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": 480,
+        "reason_precision": 0.4,
+        "reason_recall": 0.3077,
+        "reason_f1": 0.3478,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 13332
+      }
+    },
+    {
+      "query_id": "2",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "pod-04",
+        "root_cause_time": "2021-03-05 14:08:00",
+        "root_cause_reason": "network latency surge and packet loss in pod-04 gateway routing proxy causing RPC timeouts on downstream client requests"
+      },
+      "prediction": {
+        "root_cause_component": "pod-04",
+        "root_cause_time": "2021-03-05 14:11:00",
+        "root_cause_reason": "ERROR [GatewayProxy] High packet drop and network latency surge in pod-04: downstream RPC timed out after 5000ms"
+      },
+      "metrics": {
+        "ac_at_1": true,
+        "ac_at_3": true,
+        "ac_at_5": true,
+        "time_exact_match": false,
+        "time_within_3min": true,
+        "time_within_5min": true,
+        "time_delta_seconds": 180,
+        "reason_precision": 0.4667,
+        "reason_recall": 0.5,
+        "reason_f1": 0.4828,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 116
+      }
+    },
+    {
+      "query_id": "3",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "pod-11",
+        "root_cause_time": "2021-03-06 09:15:00",
+        "root_cause_reason": "disk io bottleneck and storage queue saturation in pod-11 causing write buffer stalls and database flush delays across cluster"
+      },
+      "prediction": {
+        "root_cause_component": "pod-11",
+        "root_cause_time": "2021-03-06 09:01:00",
+        "root_cause_reason": "FATAL [StorageEngine] Disk I/O bottleneck and I/O queue saturation in pod-11: write buffer stall exceeded threshold"
+      },
+      "metrics": {
+        "ac_at_1": true,
+        "ac_at_3": true,
+        "ac_at_5": true,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": 840,
+        "reason_precision": 0.5833,
+        "reason_recall": 0.5,
+        "reason_f1": 0.5385,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 101
+      }
+    },
+    {
+      "query_id": "4",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "pod-02",
+        "root_cause_time": "2021-03-07 16:05:00",
+        "root_cause_reason": "thread pool exhaustion and memory leak in pod-02 auth worker resulting in token validation timeouts and 500 internal server errors"
+      },
+      "prediction": {
+        "root_cause_component": "pod-02",
+        "root_cause_time": "2021-03-07 16:04:00",
+        "root_cause_reason": "CRITICAL [AuthWorker] Thread pool exhaustion and memory leak in pod-02: rejected execution for client token verification"
+      },
+      "metrics": {
+        "ac_at_1": true,
+        "ac_at_3": true,
+        "ac_at_5": true,
+        "time_exact_match": true,
+        "time_within_3min": true,
+        "time_within_5min": true,
+        "time_delta_seconds": 60,
+        "reason_precision": 0.5385,
+        "reason_recall": 0.4375,
+        "reason_f1": 0.4828,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 8650
+      }
+    },
+    {
+      "query_id": "5",
+      "system": "Bank",
+      "ground_truth": {
+        "root_cause_component": "pod-09",
+        "root_cause_time": "2021-03-08 21:20:00",
+        "root_cause_reason": "prolonged jvm garbage collection pauses and heap memory thrashing in pod-09 causing thread blocking and node heartbeat loss"
+      },
+      "prediction": {
+        "root_cause_component": "pod-09",
+        "root_cause_time": "2021-03-08 21:13:00",
+        "root_cause_reason": "CRITICAL [JVMRuntime] Prolonged Stop-The-World GC pause (2450ms) in pod-09: thread blocking and heartbeat missed"
+      },
+      "metrics": {
+        "ac_at_1": true,
+        "ac_at_3": true,
+        "ac_at_5": true,
+        "time_exact_match": false,
+        "time_within_3min": false,
+        "time_within_5min": false,
+        "time_delta_seconds": 420,
+        "reason_precision": 0.4545,
+        "reason_recall": 0.3571,
+        "reason_f1": 0.4,
+        "salience_refuted": true,
+        "steps_count": 6,
+        "execution_time_ms": 109
+      }
+    }
+  ]
+}
