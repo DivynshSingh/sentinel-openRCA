@@ -1,8 +1,8 @@
-# Sentinel — Agentic RCA System
+# Sentinel - Agentic RCA System
 
-Agentic AI portfolio project for root cause analysis on the [OpenRCA benchmark](https://github.com/microsoft/OpenRCA) (ICLR 2025). Built with FastAPI, DuckDB, MCP, and LangGraph.
+An agent for root cause analysis on the [OpenRCA benchmark](https://github.com/microsoft/OpenRCA) (ICLR 2025). Built with FastAPI, DuckDB, MCP, and LangGraph.
 
-## Architecture (Locked)
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -24,13 +24,12 @@ Agentic AI portfolio project for root cause analysis on the [OpenRCA benchmark](
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key design decisions (non-negotiable):**
+**Key design decisions:**
 
-1. **Data Processor runs before any LLM** — 3-sigma anomaly detection, shape classification, trace latency thresholding, log TF-IDF ranking. This is the single biggest accuracy lever (OpsAgent ablation: removing it drops Correct from 16.5% → 2.3%).
-2. **All MCP tools call REST** — no direct file access. Mirrors real observability stacks.
-3. **3 parallel agents by task** (When/What/Why), not by modality. Each reasons over the same pre-processed evidence.
-4. **Hypothesis Generator ↔ Critic loop** — the critic is a separate node with destructive persona, checking 5 anti-failure-modes (salience capture, premature commitment, presence bias, timeline consistency, causal validity).
-5. **Topology inferred from traces** — for Bank, no explicit dependency graph exists. `walk_upstream_trace` walks `parent_span_id` chains deterministically.
+1. **Data Processor runs before any LLM** - 3-sigma anomaly detection, shape classification, trace latency thresholding, log TF-IDF ranking. This is the single biggest accuracy lever (removing it drops Correctness from 16.5% → 2.3%).
+2. **3 parallel agents by task** (When/What/Why) Each reasons over the same pre-processed evidence.
+3. **Hypothesis Generator ↔ Critic loop** — the critic is a separate node with destructive persona, checking 5 anti-failure-modes (salience capture, premature commitment, presence bias, timeline consistency, causal validity).
+4. **Topology inferred from traces** — for Bank data in OpenRCA benchmark, no explicit dependency graph exists. `walk_upstream_trace` walks `parent_span_id` chains deterministically.
 
 ## Quick Start
 
